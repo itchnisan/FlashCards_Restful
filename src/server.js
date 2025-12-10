@@ -1,4 +1,4 @@
-import express, { json } from 'express';
+import express from 'express';
 import { config } from 'dotenv';
 config(); // Charger les variables d'environnement depuis le fichier .env
 
@@ -6,13 +6,13 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Middleware pour parser le JSON
-app.use(json());
+app.use(express.json());
 
 // Importer les routes
-import authRoutes from './src/routes/authRoutes';
-import userRoutes from './src/routes/userRoutes';
-import collectionRoutes from './src/routes/collectionRoutes';
-import flashCardRoutes from './src/routes/flashCardRoutes';
+import authRoutes from './routes/authRoutes';
+import userRoutes from './routes/userRoutes';
+import collectionRoutes from './routes/collectionRoutes';
+import flashCardRoutes from './routes/flashCardRoutes';
 
 // Utiliser les routes
 app.use('/api/auth', authRoutes);
