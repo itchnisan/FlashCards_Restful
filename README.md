@@ -1,8 +1,10 @@
+TITRE PROJET
 1. Initialisation du projet
 
 npm init -y
 
 2. Installation des dépendances backend
+npm install
 
 npm install express @libsql/client drizzle-orm zod bcryptjs jsonwebtoken dotenv
 npm install --save-dev nodemon
