@@ -54,10 +54,11 @@ export const getCollection = async (request, response) => {
         const collection = await db
             .select()
             .from(collections)
-            .where(eq(collections.id, id));
+            .where(collections.id , id)
+            .andWhere(collections.ownerId,userId);
         
         
-        response.status(200).json(question);
+        response.status(200).json(collection);
     } catch (error) {
         console.error(error)
         response.status(500).send({
@@ -75,7 +76,7 @@ export const getCollection = async (request, response) => {
 async function listCollections(request, response) {
   const userId = request.userId;
 
-  const userCollections = await db.select().from(collections).where('owner_id', userId);
+  const userCollections = await db.select().from(collections).where(collections.ownerId, userId);
   response.json(userCollections);
 }
 
@@ -88,7 +89,7 @@ async function listCollections(request, response) {
 async function searchPublicCollections(request, response) {
   const { title } = request.query;
 
-  const titleCollections = await db.select().from(collections).where('visibility', 'public').andWhere('title', 'like', `%${title}%`);
+  const titleCollections = await db.select().from(collections).where(collections.visibility, 'public').andWhere(collections.title, 'like', `%${title}%`);
   response.json(titleCollections);
 }
 
@@ -109,10 +110,33 @@ async function deleteCollection(request, response) {
     return response.status(403).json({ message: 'Vous n\'êtes pas le propriétaire de cette collection' });
   }
 
-  // Supprimer les flashcards associées et la collection
-  await db.delete().from(flashcards).where(flashcards.collection_id, collectionId);
+
+  await db.delete().from(flashcards).where(flashcards.collectionId, collectionId);
   await db.delete().from(collections).where(collections.id, collectionId);
   response.json({ message: 'Collection et flashcards supprimées' });
 }
 
-module.exports = { createCollection, getCollection, listCollections, searchPublicCollections, updateCollection, deleteCollection };
+
+
+/**
+ * 
+ * @param {request} request 
+ * @param {response} response 
+ */
+async function updateCollection(req, res) {
+  const { collectionId } = req.params;
+  const { title, description, visibility } = req.body;
+  const userId = req.userId;
+
+  const collection = await db.select().from(collections).where(collections.id, collectionId).first();
+  if (!collection) return res.status(404).json({ message: 'Collection non trouvée' });
+
+  if (collection.owner_id !== userId) {
+    return res.status(403).json({ message: 'Vous n\'êtes pas le propriétaire de cette collection' });
+  }
+
+  await db.update(collections).set({ title, description, visibility }).where(collections.id, collectionId);
+  res.json({ message: 'Collection mise à jour' });
+}
+
+module.exports = { createCollection, getCollection, listCollections, searchPublicCollections,updateCollection, deleteCollection };
