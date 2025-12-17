@@ -10,7 +10,7 @@ import { request, response } from "express";
  * @param {request} request 
  * @param {response} response 
  */
-export const createCollection = async (request, response) => {   
+async function createCollection (request, response){   
     try {
         const { titre, description, visibility } = request.body;
         const { userId } = request.user;
@@ -45,8 +45,8 @@ export const createCollection = async (request, response) => {
  * @param {request} request 
  * @param {response} response 
  */
-export const getCollection = async (request, response) => {
-    const { id } = request.params;
+async function getCollection (request, response){
+    const { collectionId } = request.params;
     const { userId } = request.user;
     
     try {
@@ -54,10 +54,11 @@ export const getCollection = async (request, response) => {
         const collection = await db
             .select()
             .from(collections)
-            .where(eq(collections.id, id));
+            .where(eq(collections.id , collectionId))
+            .andWhere(collections.ownerId,userId);
         
         
-        response.status(200).json(question);
+        response.status(200).json(collection);
     } catch (error) {
         console.error(error)
         response.status(500).send({
@@ -75,7 +76,7 @@ export const getCollection = async (request, response) => {
 async function listCollections(request, response) {
   const userId = request.userId;
 
-  const userCollections = await db.select().from(collections).where('owner_id', userId);
+  const userCollections = await db.select().from(collections).where(eq(collections.ownerId, userId));
   response.json(userCollections);
 }
 
@@ -88,7 +89,7 @@ async function listCollections(request, response) {
 async function searchPublicCollections(request, response) {
   const { title } = request.query;
 
-  const titleCollections = await db.select().from(collections).where('visibility', 'public').andWhere('title', 'like', `%${title}%`);
+  const titleCollections = await db.select().from(collections).where(collections.visibility, 'public').andWhere(collections.title, 'like', `%${title}%`);
   response.json(titleCollections);
 }
 
@@ -102,17 +103,47 @@ async function deleteCollection(request, response) {
   const userId = request.userId;
 
 
-  const collection = await db.select().from(collections).where(collections.id, collectionId).first();
+  const collection = await db.select().from(collections).where(eq(collections.id, collectionId)).first();
   if (!collection) return response.status(404).json({ message: 'Collection non trouvée' });
 
   if (collection.owner_id !== userId) {
     return response.status(403).json({ message: 'Vous n\'êtes pas le propriétaire de cette collection' });
   }
 
-  // Supprimer les flashcards associées et la collection
-  await db.delete().from(flashcards).where(flashcards.collection_id, collectionId);
-  await db.delete().from(collections).where(collections.id, collectionId);
+
+  await db.delete().from(flashcards).where(eq(flashcards.collectionId, collectionId));
+  await db.delete().from(collections).where(eq(collections.id, collectionId));
   response.json({ message: 'Collection et flashcards supprimées' });
 }
 
-module.exports = { createCollection, getCollection, listCollections, searchPublicCollections, updateCollection, deleteCollection };
+
+
+/**
+ * 
+ * @param {request} request 
+ * @param {response} response 
+ */
+async function updateCollection(req, res) {
+  const { collectionId } = req.params;
+  const { title, description, visibility } = req.body;
+  const userId = req.userId;
+
+  const collection = await db.select().from(collections).where(eq(collections.id, collectionId)).first();
+  if (!collection) return res.status(404).json({ message: 'Collection non trouvée' });
+
+  if (collection.owner_id !== userId) {
+    return res.status(403).json({ message: 'Vous n\'êtes pas le propriétaire de cette collection' });
+  }
+
+  await db.update(collections).set({ title, description, visibility }).where(eq(collections.id, collectionId));
+  res.json({ message: 'Collection mise à jour' });
+}
+
+export {
+  createCollection,
+  getCollection,
+  listCollections,
+  searchPublicCollections,
+  updateCollection,
+  deleteCollection
+};

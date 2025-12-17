@@ -9,16 +9,16 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 
 // Importer les routes
-import authRoutes from './routes/authRoutes';
-import userRoutes from './routes/userRoutes';
-import collectionRoutes from './routes/collectionRoutes';
-import flashCardRoutes from './routes/flashCardRoutes';
+import authRoutes from './routers/authRouter.js';
+import userRoutes from './routers/userRouter.js';
+import collectionRoutes from './routers/collectionRouter.js';
+import flashCardRoutes from './routers/flashCardRouter.js';
 
 // Utiliser les routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+//app.use('/api/users', userRoutes);
 app.use('/api/collection', collectionRoutes);
-app.use('/api/flashcards', flashCardRoutes);
+//app.use('/api/flashcards', flashCardRoutes);
 
 // Démarrer le serveur
 app.listen(port, () => {
