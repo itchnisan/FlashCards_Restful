@@ -10,7 +10,7 @@ import { request, response } from "express";
  * @param {request} request 
  * @param {response} response 
  */
-export const createCollection = async (request, response) => {   
+async function createCollection (request, response){   
     try {
         const { titre, description, visibility } = request.body;
         const { userId } = request.user;
@@ -45,7 +45,7 @@ export const createCollection = async (request, response) => {
  * @param {request} request 
  * @param {response} response 
  */
-export const getCollection = async (request, response) => {
+async function getCollection (request, response){
     const { id } = request.params;
     const { userId } = request.user;
     
@@ -139,4 +139,11 @@ async function updateCollection(req, res) {
   res.json({ message: 'Collection mise à jour' });
 }
 
-module.exports = { createCollection, getCollection, listCollections, searchPublicCollections,updateCollection, deleteCollection };
+export {
+  createCollection,
+  getCollection,
+  listCollections,
+  searchPublicCollections,
+  updateCollection,
+  deleteCollection
+};

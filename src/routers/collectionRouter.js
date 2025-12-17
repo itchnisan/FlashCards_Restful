@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { createCollection, getCollection, listCollections, searchPublicCollections, updateCollection, deleteCollection } from '../controllers/collectionController';
-import authMiddleware from '../middlewares/authMiddleware';
+import { createCollection, getCollection, listCollections, searchPublicCollections,updateCollection, deleteCollection } from '../controllers/collectionController.js';
+import authMiddleware from '../middlewares/authMiddleware.js';
 
 const router = Router();
 
