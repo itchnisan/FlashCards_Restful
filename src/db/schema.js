@@ -40,7 +40,11 @@ export const studies = sqliteTable('studies', {
     level: integer().default(1),
 
     lastRevisionDate: integer('last_revision_date', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-    nextRevisionDate: integer('next_revision_date', { mode: 'timestamp' }).$defaultFn(() => new Date()+level),
+    nextRevisionDate: integer('next_revision_date', { mode: 'timestamp' }).$defaultFn(() =>{
+        const today = new Date();
+        today.setDate(today.getDate() + 1)
+        return today
+    }),
 
     userId: text('user_id')
     .references(() => users.id, { onDelete: 'cascade' })
