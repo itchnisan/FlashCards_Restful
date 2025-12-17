@@ -20,7 +20,8 @@ import { eq } from "drizzle-orm";
 export const register = async (request, response) => {
     
     try {
-        const { username, password, email } = request.body;
+        console.log("Beginning...");
+        const { firstname, lastname, password, email } = request.body;
         
         const hashedPassword = await bcrypt.hash(password, 12);
         
@@ -31,12 +32,12 @@ export const register = async (request, response) => {
         const [newUser] = await db.insert(users).values({
             // L'ordre des valeurs n'a pas d'importance 
             // car le nom de la colonne est déjà spécifié
-            username,
+            firstName: firstname,
+            lastName: lastname,
             password: hashedPassword,
             email
         }).returning({
             email: users.email,
-            username: users.username,
             id: users.id 
         });
 
@@ -53,6 +54,7 @@ export const register = async (request, response) => {
             // token: 'TOKEN_JWT'
             token
         });
+        console.log("Ending.");
     } catch (error) {
         console.error(error);
         response.status(500).json({
