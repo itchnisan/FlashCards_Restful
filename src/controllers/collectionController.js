@@ -46,7 +46,7 @@ async function createCollection (request, response){
  * @param {response} response 
  */
 async function getCollection (request, response){
-    const { id } = request.params;
+    const { collectionId } = request.params;
     const { userId } = request.user;
     
     try {
@@ -54,7 +54,7 @@ async function getCollection (request, response){
         const collection = await db
             .select()
             .from(collections)
-            .where(collections.id , id)
+            .where(eq(collections.id , collectionId))
             .andWhere(collections.ownerId,userId);
         
         
@@ -76,7 +76,7 @@ async function getCollection (request, response){
 async function listCollections(request, response) {
   const userId = request.userId;
 
-  const userCollections = await db.select().from(collections).where(collections.ownerId, userId);
+  const userCollections = await db.select().from(collections).where(eq(collections.ownerId, userId));
   response.json(userCollections);
 }
 
@@ -103,7 +103,7 @@ async function deleteCollection(request, response) {
   const userId = request.userId;
 
 
-  const collection = await db.select().from(collections).where(collections.id, collectionId).first();
+  const collection = await db.select().from(collections).where(eq(collections.id, collectionId)).first();
   if (!collection) return response.status(404).json({ message: 'Collection non trouvée' });
 
   if (collection.owner_id !== userId) {
@@ -111,8 +111,8 @@ async function deleteCollection(request, response) {
   }
 
 
-  await db.delete().from(flashcards).where(flashcards.collectionId, collectionId);
-  await db.delete().from(collections).where(collections.id, collectionId);
+  await db.delete().from(flashcards).where(eq(flashcards.collectionId, collectionId));
+  await db.delete().from(collections).where(eq(collections.id, collectionId));
   response.json({ message: 'Collection et flashcards supprimées' });
 }
 
@@ -128,14 +128,14 @@ async function updateCollection(req, res) {
   const { title, description, visibility } = req.body;
   const userId = req.userId;
 
-  const collection = await db.select().from(collections).where(collections.id, collectionId).first();
+  const collection = await db.select().from(collections).where(eq(collections.id, collectionId)).first();
   if (!collection) return res.status(404).json({ message: 'Collection non trouvée' });
 
   if (collection.owner_id !== userId) {
     return res.status(403).json({ message: 'Vous n\'êtes pas le propriétaire de cette collection' });
   }
 
-  await db.update(collections).set({ title, description, visibility }).where(collections.id, collectionId);
+  await db.update(collections).set({ title, description, visibility }).where(eq(collections.id, collectionId));
   res.json({ message: 'Collection mise à jour' });
 }
 
