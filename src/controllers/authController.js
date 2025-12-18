@@ -29,7 +29,7 @@ export const register = async (request, response) => {
         // renvoie un tableau avec un seul user, celui 
         // que l'on vient de créer. Cela permet d'avoir
         // uniquement la 1ère valeur
-        const [newUser] = await db.insert(users).values({
+        const [newUser] = await database.insert(users).values({
             // L'ordre des valeurs n'a pas d'importance 
             // car le nom de la colonne est déjà spécifié
             firstName: firstname,
