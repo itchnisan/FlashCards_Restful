@@ -1,0 +1,15 @@
+import { Router } from "express";
+import { register, login } from "../controllers/authController.js";
+
+import { validateBody } from "../middlewares/validation.js";
+import { registerSchema } from "../models/auth.js";
+import { loginSchema } from "../models/auth.js";
+
+const router = Router();
+// Registration and login routes
+
+router.post('/register', validateBody(registerSchema), register);
+
+router.post('/login', validateBody(loginSchema), login);
+
+export default router;
