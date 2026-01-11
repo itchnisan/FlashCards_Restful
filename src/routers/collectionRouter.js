@@ -4,11 +4,13 @@ import authMiddleware from '../middlewares/authMiddleware.js';
 
 const router = Router();
 
-router.post('/', authMiddleware, createCollection);
-router.get('/:collectionId', authMiddleware, getCollection);
-router.get('/', authMiddleware, listCollections);
-router.get('/search', authMiddleware, searchPublicCollections);
-router.put('/:collectionId', authMiddleware, updateCollection);
-router.delete('/:collectionId', authMiddleware, deleteCollection);
+router.use(authMiddleware);
+
+router.post('/', ()=>{}, createCollection);
+router.get('/search', searchPublicCollections);
+router.get('/:collectionId', ()=>{}, getCollection);
+router.get('/', listCollections);
+router.put('/:collectionId', ()=>{}, updateCollection);
+router.delete('/:collectionId', ()=>{}, deleteCollection);
 
 export default router;

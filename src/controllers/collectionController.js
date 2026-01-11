@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 import { db } from "../db/database.js";
 import { collections,flashcards } from "../db/schema.js";
 import { request, response } from "express";
@@ -87,10 +87,26 @@ async function listCollections(request, response) {
  * @param {response} response 
  */
 async function searchPublicCollections(request, response) {
-  const { title } = request.query;
+    const { title } = request.query;
+    console.log(title);
+    if(!title){
+        const titleCollections = await db.select()
+        .from(collections)
+        .where(
+            eq(collections.visibility, 'public')
+        );
+        return response.json(titleCollections);
+    }
 
-  const titleCollections = await db.select().from(collections).where(collections.visibility, 'public').andWhere(collections.title, 'like', `%${title}%`);
-  response.json(titleCollections);
+    const titleCollections = await db.select()
+    .from(collections)
+    .where(
+        and(
+            eq(collections.visibility, 'public'),
+            like(collections.title, `%${title}%`)
+        )
+    );
+    response.json(titleCollections);
 }
 
 /**
