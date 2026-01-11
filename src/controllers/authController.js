@@ -34,17 +34,23 @@ export const register = async (request, response) => {
             firstName: firstname,
             lastName: lastname,
             password: hashedPassword,
-            email
+            email, 
+            isAdmin
         }).returning({
             email: users.email,
-            id: users.id
+            id: users.id,
+            isAdmin: users.isAdmin
         });
 
         // Create JWT token valid for 24 hours
         const token = jwt.sign(
-            { userId: newUser.id },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
+            { 
+                userId: newUser.id,
+                isAdmin: newUser.isAdmin
+            },   // Toutes les données que l'on vas chiffrer dans le user token
+            process.env.JWT_SECRET,  // 2ème argument c'est la clé secrète
+            // { expiresIn: '24j' }     // token valide pendant 24 jours
+            { expiresIn: '24h' }        // token valide 24 heures
         );
 
         response.status(201).json({
@@ -90,9 +96,10 @@ export const login = async (request, response) => {
 
         // Create JWT token valid for 24 hours
         const token = jwt.sign(
-            { userId: user.id },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
+            { userId: user.id, isAdmin: user.isAdmin },   // Toutes les données que l'on vas chiffrer dans le user token
+            process.env.JWT_SECRET,  // 2ème argument c'est la clé secrète
+            // { expiresIn: '24j' }     // token valide pendant 24 jours
+            { expiresIn: '24h' }        // token valide 24 heures
         );
 
         response.status(200).json({
@@ -100,7 +107,8 @@ export const login = async (request, response) => {
             userData: {
                 id: user.id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                isAdmin: user.isAdmin
             },
             token
         });

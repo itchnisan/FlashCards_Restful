@@ -140,8 +140,9 @@ async function searchPublicCollections(request, response) {
 // Delete a collection and its flashcards
 // - Only the owner can delete
 async function deleteCollection(request, response) {
-    const { collectionId } = request.params;
-    const userId = request.user.userId;
+  const { collectionId } = request.params;
+  const userId = request.user.userId;
+    const isAdmin = req.user.isAdmin;
 
     // Check if collection exists
     const [collection] = await db
@@ -153,10 +154,9 @@ async function deleteCollection(request, response) {
         return response.status(404).json({ message: 'Collection not found' });
     }
 
-    // Check ownership
-    if (collection.ownerId !== userId) {
-        return response.status(403).json({ message: 'You are not the owner' });
-    }
+  if (collection.ownerId !== userId && !isAdmin) {
+    return response.status(403).json({ message: 'You are not the owner' });
+  }
 
     // Delete related flashcards first
     await db.delete(flashcards).where(eq(flashcards.collectionId, collectionId));
@@ -182,6 +182,7 @@ async function updateCollection(req, res) {
     const { collectionId } = req.params;
     const { title, description, visibility } = req.body;
     const userId = req.user.userId;
+    const isAdmin = req.user.isAdmin;
 
     // No fields to update
     if (title === undefined && description === undefined && visibility === undefined) {
@@ -194,12 +195,7 @@ async function updateCollection(req, res) {
         .from(collections)
         .where(eq(collections.id, collectionId));
 
-    if (!collection) {
-        return res.status(404).json({ message: 'Collection not found' });
-    }
-
-    // Check ownership
-    if (collection.ownerId !== userId) {
+    if (collection.ownerId !== userId && !isAdmin) {
         return res.status(403).json({ message: 'You are not the collection owner' });
     }
 

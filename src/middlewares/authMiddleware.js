@@ -15,28 +15,25 @@ export const authenticateToken = (request, response, next) => {
     const token = authHeader && authHeader.split(' ')[1];
 
     // No token provided
-    if (!token) {
-      return response.status(401).json({
-        error: 'Access token required'
-      });
+        if (!token) {
+            return response.status(401).json({
+                error: 'Access token required'
+            });
+        }
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET); // retourne le token déchiffré
+        
+        const userId = decodedToken.userId;        
+        const isAdmin = decodedToken.isAdmin;    
+
+        request.user = { userId, isAdmin };
+        
+        next();   
+    } catch (error) {
+        console.error("Error:", error);
+        response.status(401).json({
+            error: 'Invalid token'
+        });
     }
-
-    // Verify and decode JWT
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Attach user data to request
-    request.user = {
-      userId: decodedToken.userId
-    };
-
-    next();
-  } catch (error) {
-    console.error('JWT error:', error);
-
-    response.status(401).json({
-      error: 'Invalid token'
-    });
-  }
 };
 
 export default authenticateToken;
