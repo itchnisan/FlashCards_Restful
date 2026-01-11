@@ -74,7 +74,7 @@ async function getCollection (request, response){
  * @param {response} response 
  */
 async function listCollections(request, response) {
-  const userId = request.userId;
+  const userId = request.user.userId;
 
   const userCollections = await db.select().from(collections).where(eq(collections.ownerId, userId));
   response.json(userCollections);

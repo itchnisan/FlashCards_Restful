@@ -1,4 +1,4 @@
-import { database } from './database.js';
+import { db } from './database.js';
 import { collections, studies, flashcards, users } from './schema.js';
 
 import bcrypt from 'bcrypt';
@@ -8,10 +8,10 @@ const seed = async () => {
     console.log('Starting database seeding...');
 
     try{
-        await database.delete(users);
-        await database.delete(collections);
-        await database.delete(flashcards);
-        await database.delete(studies);
+        await db.delete(users);
+        await db.delete(collections);
+        await db.delete(flashcards);
+        await db.delete(studies);
 
         const defaultPassword = "123456";
         const louisonPassword = await bcrypt.hash(defaultPassword, 12);
@@ -40,7 +40,7 @@ const seed = async () => {
             }
         ];
 
-        const usersInfo = (await database.insert(users).values(seedUsers).returning());
+        const usersInfo = (await db.insert(users).values(seedUsers).returning());
         const usersId = usersInfo.map(function (userInfo){
             return userInfo["id"];
         });
@@ -71,7 +71,7 @@ const seed = async () => {
             }
         ];
 
-        const collectionsInfo = (await database.insert(collections).values(seedCollections).returning());
+        const collectionsInfo = (await db.insert(collections).values(seedCollections).returning());
         const collectionsId = collectionsInfo.map(function (collectionInfo){
             return collectionInfo["id"];
         });
@@ -108,7 +108,7 @@ const seed = async () => {
 
         
 
-        const flashcardsInfo = (await database.insert(flashcards).values(seedFlashcards).returning());
+        const flashcardsInfo = (await db.insert(flashcards).values(seedFlashcards).returning());
         const flashcardsId = flashcardsInfo.map(function (flashcardInfo){
             return flashcardInfo["id"];
         });
@@ -156,7 +156,7 @@ const seed = async () => {
         ]
 
         
-        const studiesInfo = (await database.insert(studies).values(seedStudies).returning());
+        const studiesInfo = (await db.insert(studies).values(seedStudies).returning());
         const studiesId = studiesInfo.map(function (studyInfo){
             return studyInfo["id"];
         });
