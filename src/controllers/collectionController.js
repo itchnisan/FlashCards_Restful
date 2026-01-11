@@ -205,7 +205,7 @@ async function updateCollection(req, res) {
         .set({ title, description, visibility })
         .where(eq(collections.id, collectionId));
 
-    res.json({ message: 'Collection updated' });
+    res.status(200).json({ message: 'Collection updated' });
 }
 
 
