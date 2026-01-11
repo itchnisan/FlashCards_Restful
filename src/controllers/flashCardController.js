@@ -1,156 +1,232 @@
-import { eq } from "drizzle-orm";
-import { db } from "../db/database.js";
-import { questions } from "../db/schema.js";
-import { request, response } from "express";
+import { db } from '../db/client.js';
+import { flashcards, collections, studies } from '../db/schema.js';
+import { eq, and, lte } from 'drizzle-orm';
 
+/* -----------------------------
+   CREATE FLASHCARD
+-------------------------------- */
+export const createFlashcard = async (req, res) => {
+  try {
+    const { frontText, backText, frontUrls, backUrls, collectionId } = req.body;
 
-export const getAllQuestions = async (request, response) => {
-    try {
-        const result = await db.select().from(questions).orderBy('created_at', 'desc');
+    const [collection] = await db
+      .select()
+      .from(collections)
+      .where(eq(collections.id, collectionId));
 
-        response.status(200).json(result);
-    } catch (error) {
-        response.status(500).send({
-            error: 'Failed to query questions',
-        });
+    if (!collection) {
+      return res.status(404).json({ message: 'Collection introuvable' });
     }
+
+    if (collection.ownerId !== req.user.id && !req.user.isAdmin) {
+      return res.status(403).json({ message: 'Accès interdit' });
+    }
+
+    const [flashcard] = await db
+      .insert(flashcards)
+      .values({
+        frontText,
+        backText,
+        frontUrls,
+        backUrls,
+        collectionId,
+      })
+      .returning();
+
+    // Initialisation de la répétition espacée pour le propriétaire
+    await db.insert(studies).values({
+      userId: req.user.id,
+      flashcardId: flashcard.id,
+    });
+
+    res.status(201).json(flashcard);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
-/**
- * 
- * @param {request} request 
- * @param {response} response 
- */
-export const createQuestions = async (request, response) => {   
-    try {
-        const { questionText, answer, difficulty } = request.body;
-        const { userId } = request.user;
+/* -----------------------------
+   GET FLASHCARD BY ID
+-------------------------------- */
+export const getFlashcard = async (req, res) => {
+  const { flashcardId } = req.params;
 
-        // On fait déjà la validation avant donc ici c'est inutile et en plus 
-        // comme on fait la validation avant le nom n'est plus le même
-        // if(!question ||!answer) {
-        //     return response.status(400).json({ error: "Question and answer are required!" });
-        // }
+  const [result] = await db
+    .select({
+      flashcard: flashcards,
+      collection: collections,
+    })
+    .from(flashcards)
+    .innerJoin(collections, eq(collections.id, flashcards.collectionId))
+    .where(eq(flashcards.id, flashcardId));
 
-        // const newQuestion = await db.insert(questions).values({
-        //     questionText, 
-        //     answer, 
-        //     difficulty
-        // }).returning(); // Vas retourner un tableau avec autant d'élément qu'on a ajouté
-        
-        const [newQuestion] = await db.insert(questions).values({
-            questionText, 
-            answer, 
-            difficulty,
-            createdBy: userId
-        }).returning();
-        
-        response.status(201).json({ 
-            message: 'Question created!',
-            data: newQuestion,
-        });
-    } catch (error) {
-        console.error(error)
-        response.status(500).send({
-            error: 'Failed to create question',
-        })
-    }
+  if (!result) {
+    return res.status(404).json({ message: 'Flashcard introuvable' });
+  }
 
+  const { collection } = result;
+
+  if (
+    collection.visibility === 'privée' &&
+    collection.ownerId !== req.user.id &&
+    !req.user.isAdmin
+  ) {
+    return res.status(403).json({ message: 'Accès interdit' });
+  }
+
+  res.json(result.flashcard);
 };
 
-/**
- * 
- * @param {request} request 
- * @param {response} response 
- */
-export const deleteQuestion = async (request, response) => {
-    try {
-        const { id } = request.params;      // L'id on le passe dans les paramètres de l'url
+/* -----------------------------
+   LIST FLASHCARDS OF COLLECTION
+-------------------------------- */
+export const listFlashcardsByCollection = async (req, res) => {
+  const { collectionId } = req.params;
 
-        const { userId } = request.user;
+  const [collection] = await db
+    .select()
+    .from(collections)
+    .where(eq(collections.id, collectionId));
 
-        const [questionsUserId] = await db.select({createdBy: questions.createdBy}).from(questions).where(eq(questions.id, id))
+  if (!collection) {
+    return res.status(404).json({ message: 'Collection introuvable' });
+  }
 
-        if(questionsUserId.createdBy !== userId) {
-            return response.status(403).json({
-                error: 'Forbidden'
-            });
-        }
+  if (
+    collection.visibility === 'privée' &&
+    collection.ownerId !== req.user.id &&
+    !req.user.isAdmin
+  ) {
+    return res.status(403).json({ message: 'Accès interdit' });
+  }
 
-        const [deletedQuestion] = await db
-            .delete(questions)
-            .where(eq(questions.id, id))
-            .returning();
-        if(!deletedQuestion){
-            return response.status(404).json({
-                message: 'Question not found.',
-            }); // Ce early return permet d'éviter des else
-        }
-        response.status(200).send({ message: `Question ${id} deleted` });
-    } catch (error) {
-        console.error(error);
-        response.status(500).send({
-            error: 'Failed to delete question :' + error
-        });
-    }
+  const cards = await db
+    .select()
+    .from(flashcards)
+    .where(eq(flashcards.collectionId, collectionId));
 
+  res.json(cards);
 };
 
-/**
- * 
- * @param {request} request 
- * @param {response} response 
- */
-export const getQuestion = async (request, response) => {
-    const { id } = request.params;
-    
-    try {
-        // const [{ questionText, answer, difficulty }] = await db.select().from(questions).where(eq(questions.id, id));
-        // //=> Prend uniquement la 1ère valeur du tableau résultat
-        // response.status(200).send({
-        //     message: `
-        //     Question : ${questionText},
-        //     Answer : ${answer},
-        //     Difficulty : ${difficulty}
-        //     `
-        // })
+/* -----------------------------
+   UPDATE FLASHCARD
+-------------------------------- */
+export const updateFlashcard = async (req, res) => {
+  const { flashcardId } = req.params;
 
-        const question = await db
-            .select()
-            .from(questions)
-            .where(eq(questions.id, id));
-            
-        response.status(200).json(question);
-    } catch (error) {
-        console.error(error)
-        response.status(500).send({
-            error: 'Failed to query the question :' +error
-        })
-    }
-}
+  const [result] = await db
+    .select({
+      flashcard: flashcards,
+      collection: collections,
+    })
+    .from(flashcards)
+    .innerJoin(collections, eq(collections.id, flashcards.collectionId))
+    .where(eq(flashcards.id, flashcardId));
 
-// export const getAllQuestions = (request, response) => {
-//     response.status(200).send([
-//         {
-//             id: '1',
-//             question: 'Quelle est la capitale de la France ?',
-//             answer: 'Paris',
-//         }
-//     ]);
-// };
+  if (!result) {
+    return res.status(404).json({ message: 'Flashcard introuvable' });
+  }
 
-// export const createQuestions = (request, response) => {   
-//     const { question, answer } = request.body;
+  if (result.collection.ownerId !== req.user.id && !req.user.isAdmin) {
+    return res.status(403).json({ message: 'Accès interdit' });
+  }
 
-//     if(!question ||!answer) {
-//         return response.status(400).json({ error: "Question and answer are required!" });
-//     }
+  const [updated] = await db
+    .update(flashcards)
+    .set(req.body)
+    .where(eq(flashcards.id, flashcardId))
+    .returning();
 
-//     response.status(201).send({ message: 'Question created!' });
-// };
+  res.json(updated);
+};
 
-// export const deleteQuestion = (request, response) => {
-//     const { id } = request.params;
+/* -----------------------------
+   DELETE FLASHCARD
+-------------------------------- */
+export const deleteFlashcard = async (req, res) => {
+  const { flashcardId } = req.params;
 
-//     response.status(200).send({ message: `Question ${id} deleted` });
-// };
+  const [result] = await db
+    .select({
+      flashcard: flashcards,
+      collection: collections,
+    })
+    .from(flashcards)
+    .innerJoin(collections, eq(collections.id, flashcards.collectionId))
+    .where(eq(flashcards.id, flashcardId));
+
+  if (!result) {
+    return res.status(404).json({ message: 'Flashcard introuvable' });
+  }
+
+  if (result.collection.ownerId !== req.user.id && !req.user.isAdmin) {
+    return res.status(403).json({ message: 'Accès interdit' });
+  }
+
+  await db.delete(flashcards).where(eq(flashcards.id, flashcardId));
+
+  res.status(204).send();
+};
+
+/* -----------------------------
+   FLASHCARDS TO REVIEW
+-------------------------------- */
+export const flashcardsToReview = async (req, res) => {
+  const { collectionId } = req.params;
+
+  const cards = await db
+    .select({
+      flashcard: flashcards,
+      study: studies,
+    })
+    .from(studies)
+    .innerJoin(flashcards, eq(flashcards.id, studies.flashcardId))
+    .where(
+      and(
+        eq(studies.userId, req.user.id),
+        eq(flashcards.collectionId, collectionId),
+        lte(studies.nextRevisionDate, new Date())
+      )
+    );
+
+  res.json(cards);
+};
+
+/* -----------------------------
+   REVIEW FLASHCARD
+-------------------------------- */
+export const reviewFlashcard = async (req, res) => {
+  const { flashcardId } = req.params;
+
+  const delays = [1, 2, 4, 8, 16];
+
+  const [study] = await db
+    .select()
+    .from(studies)
+    .where(
+      and(
+        eq(studies.flashcardId, flashcardId),
+        eq(studies.userId, req.user.id)
+      )
+    );
+
+  if (!study) {
+    return res.status(404).json({ message: 'Aucune étude trouvée' });
+  }
+
+  const newLevel = Math.min(study.level + 1, 5);
+  const nextDate = new Date();
+  nextDate.setDate(nextDate.getDate() + delays[newLevel - 1]);
+
+  const [updated] = await db
+    .update(studies)
+    .set({
+      level: newLevel,
+      lastRevisionDate: new Date(),
+      nextRevisionDate: nextDate,
+    })
+    .where(eq(studies.id, study.id))
+    .returning();
+
+  res.json(updated);
+};

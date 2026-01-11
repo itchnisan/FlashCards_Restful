@@ -1,37 +1,65 @@
-import { Router } from "express";
-// import authMiddleware from "../middlewares/authMiddleware.js";
+import { Router } from 'express';
+import authMiddleware from '../middlewares/authMiddleware.js';
+import { validateBody, validateParams } from '../middlewares/validation.js';
 
-// import {
-//   getAllQuestions,
-//   createQuestions,
-//   getQuestion,
-//   deleteQuestion
-// } from "../controllers/questionController.js";
+import {
+  createFlashcard,
+  getFlashcard,
+  listFlashcardsByCollection,
+  updateFlashcard,
+  deleteFlashcard,
+  flashcardsToReview,
+  reviewFlashcard,
+} from '../controllers/flashCardController.js';
+
+import {
+  createFlashcardSchema,
+  updateFlashcardSchema,
+  flashcardIdSchema,
+  collectionIdSchema,
+} from '../models/flashCardsModel.js';
 
 const router = Router();
 
-// /**
-//  * Lister toutes les questions
-//  * GET /questions
-//  */
-// router.get("/", authMiddleware, getAllQuestions);
+router.use(authMiddleware);
 
-// /**
-//  * Créer une question
-//  * POST /questions
-//  */
-// router.post("/", authMiddleware, createQuestions);
+router.post('/', validateBody(createFlashcardSchema), createFlashcard);
 
-// /**
-//  * Récupérer une question
-//  * GET /questions/:id
-//  */
-// router.get("/:id", authMiddleware, getQuestion);
+router.get(
+  '/collection/:collectionId',
+  validateParams(collectionIdSchema),
+  listFlashcardsByCollection
+);
 
-// /**
-//  * Supprimer une question
-//  * DELETE /questions/:id
-//  */
-// router.delete("/:id", authMiddleware, deleteQuestion);
+router.get(
+  '/collection/:collectionId/review',
+  validateParams(collectionIdSchema),
+  flashcardsToReview
+);
+
+router.get(
+  '/:flashcardId',
+  validateParams(flashcardIdSchema),
+  getFlashcard
+);
+
+router.patch(
+  '/:flashcardId',
+  validateParams(flashcardIdSchema),
+  validateBody(updateFlashcardSchema),
+  updateFlashcard
+);
+
+router.delete(
+  '/:flashcardId',
+  validateParams(flashcardIdSchema),
+  deleteFlashcard
+);
+
+router.post(
+  '/:flashcardId/review',
+  validateParams(flashcardIdSchema),
+  reviewFlashcard
+);
 
 export default router;
