@@ -23,9 +23,11 @@ export const authenticateToken = (request, response, next) => {
         }
 
         const decodedToken = jwt.verify(token, process.env.JWT_SECRET); // retourne le token déchiffré
+        
         const userId = decodedToken.userId;        
+        const isAdmin = decodedToken.isAdmin;    
 
-        request.user = { userId };
+        request.user = { userId, isAdmin };
         
         next();   
     } catch (error) {

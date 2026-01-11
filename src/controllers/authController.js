@@ -35,14 +35,19 @@ export const register = async (request, response) => {
             firstName: firstname,
             lastName: lastname,
             password: hashedPassword,
-            email
+            email, 
+            isAdmin
         }).returning({
             email: users.email,
-            id: users.id 
+            id: users.id,
+            isAdmin: users.isAdmin
         });
 
         const token = jwt.sign(
-            { userId: newUser.id },   // Toutes les données que l'on vas chiffrer dans le user token
+            { 
+                userId: newUser.id,
+                isAdmin: newUser.isAdmin
+            },   // Toutes les données que l'on vas chiffrer dans le user token
             process.env.JWT_SECRET,  // 2ème argument c'est la clé secrète
             // { expiresIn: '24j' }     // token valide pendant 24 jours
             { expiresIn: '24h' }        // token valide 24 heures
@@ -85,7 +90,7 @@ export const login = async (request, response) => {
         }
 
         const token = jwt.sign(
-            { userId: user.id },   // Toutes les données que l'on vas chiffrer dans le user token
+            { userId: user.id, isAdmin: user.isAdmin },   // Toutes les données que l'on vas chiffrer dans le user token
             process.env.JWT_SECRET,  // 2ème argument c'est la clé secrète
             // { expiresIn: '24j' }     // token valide pendant 24 jours
             { expiresIn: '24h' }        // token valide 24 heures
@@ -96,7 +101,8 @@ export const login = async (request, response) => {
             userData: {
                 id: user.id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                isAdmin: user.isAdmin
             },
             token
         });

@@ -127,6 +127,7 @@ async function searchPublicCollections(request, response) {
 async function deleteCollection(request, response) {
   const { collectionId } = request.params;
   const userId = request.user.userId;
+    const isAdmin = req.user.isAdmin;
 
 
   const [collection] = await db.select().from(collections).where(eq(collections.id, collectionId));
@@ -134,7 +135,7 @@ async function deleteCollection(request, response) {
 
   console.log(collection.ownerId)
   console.log(userId)
-  if (collection.ownerId !== userId) {
+  if (collection.ownerId !== userId && !isAdmin) {
     return response.status(403).json({ message: 'You are not the owner' });
   }
 
@@ -155,6 +156,7 @@ async function updateCollection(req, res) {
     const { collectionId } = req.params;
     const { title, description, visibility } = req.body;
     const userId = req.user.userId;
+    const isAdmin = req.user.isAdmin;
 
     if (title === undefined && description === undefined && visibility === undefined) {
         return res.status(400).json({ message: "No fields to update" });
@@ -163,7 +165,7 @@ async function updateCollection(req, res) {
     const [collection] = await db.select().from(collections).where(eq(collections.id, collectionId));
     if (!collection) return res.status(404).json({ message: 'Collection not found' });
 
-    if (collection.ownerId !== userId) {
+    if (collection.ownerId !== userId && !isAdmin) {
         return res.status(403).json({ message: 'You are not the collection owner' });
     }
 
