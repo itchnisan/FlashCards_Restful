@@ -201,7 +201,7 @@ export const deleteFlashcard = async (req, res) => {
 
   await db.delete(flashcards).where(eq(flashcards.id, flashcardId));
 
-  res.status(204).send({message:"Flashcard successfuly deleted"});
+  res.status(200).send({message:"Flashcard successfuly deleted"});
 };
 
 /* -----------------------------
@@ -275,5 +275,5 @@ export const reviewFlashcard = async (req, res) => {
     .where(eq(studies.id, study.id))
     .returning();
 
-  res.json(updated);
+  res.status(200).json(updated);
 };
