@@ -5,23 +5,30 @@ import { eq, and, lte } from 'drizzle-orm';
 /* -----------------------------
    CREATE FLASHCARD
 -------------------------------- */
+
+// Create a flashcard inside a collection
+// - Only collection owner or admin can create
+// - Initializes spaced repetition for the owner
 export const createFlashcard = async (req, res) => {
   try {
     const { frontText, backText, frontUrls, backUrls, collectionId } = req.body;
 
+    // Check if collection exists
     const [collection] = await db
       .select()
       .from(collections)
       .where(eq(collections.id, collectionId));
 
     if (!collection) {
-      return res.status(404).json({ message: 'Collection introuvable' });
+      return res.status(404).json({ message: 'Collection not found' });
     }
 
+    // Check access rights
     if (collection.ownerId !== req.user.id && !req.user.isAdmin) {
-      return res.status(403).json({ message: 'Accès interdit' });
+      return res.status(403).json({ message: 'Forbidden' });
     }
 
+    // Create flashcard
     const [flashcard] = await db
       .insert(flashcards)
       .values({
@@ -33,7 +40,7 @@ export const createFlashcard = async (req, res) => {
       })
       .returning();
 
-    // Initialisation de la répétition espacée pour le propriétaire
+    // Initialize spaced repetition for the owner
     await db.insert(studies).values({
       userId: req.user.id,
       flashcardId: flashcard.id,
@@ -48,6 +55,10 @@ export const createFlashcard = async (req, res) => {
 /* -----------------------------
    GET FLASHCARD BY ID
 -------------------------------- */
+
+// Get a flashcard by id
+// - Private collections: only owner or admin
+// - Public collections: accessible
 export const getFlashcard = async (req, res) => {
   const { flashcardId } = req.params;
 
@@ -61,17 +72,18 @@ export const getFlashcard = async (req, res) => {
     .where(eq(flashcards.id, flashcardId));
 
   if (!result) {
-    return res.status(404).json({ message: 'Flashcard introuvable' });
+    return res.status(404).json({ message: 'Flashcard not found' });
   }
 
   const { collection } = result;
 
+  // Check visibility and access
   if (
     collection.visibility === 'privée' &&
     collection.ownerId !== req.user.id &&
     !req.user.isAdmin
   ) {
-    return res.status(403).json({ message: 'Accès interdit' });
+    return res.status(403).json({ message: 'Forbidden' });
   }
 
   res.json(result.flashcard);
@@ -80,24 +92,29 @@ export const getFlashcard = async (req, res) => {
 /* -----------------------------
    LIST FLASHCARDS OF COLLECTION
 -------------------------------- */
+
+// List all flashcards of a collection
+// - Access depends on collection visibility
 export const listFlashcardsByCollection = async (req, res) => {
   const { collectionId } = req.params;
 
+  // Check if collection exists
   const [collection] = await db
     .select()
     .from(collections)
     .where(eq(collections.id, collectionId));
 
   if (!collection) {
-    return res.status(404).json({ message: 'Collection introuvable' });
+    return res.status(404).json({ message: 'Collection not found' });
   }
 
+  // Check access rights
   if (
     collection.visibility === 'privée' &&
     collection.ownerId !== req.user.id &&
     !req.user.isAdmin
   ) {
-    return res.status(403).json({ message: 'Accès interdit' });
+    return res.status(403).json({ message: 'Forbidden' });
   }
 
   const cards = await db
@@ -111,6 +128,9 @@ export const listFlashcardsByCollection = async (req, res) => {
 /* -----------------------------
    UPDATE FLASHCARD
 -------------------------------- */
+
+// Update a flashcard
+// - Only collection owner or admin
 export const updateFlashcard = async (req, res) => {
   const { flashcardId } = req.params;
 
@@ -124,11 +144,12 @@ export const updateFlashcard = async (req, res) => {
     .where(eq(flashcards.id, flashcardId));
 
   if (!result) {
-    return res.status(404).json({ message: 'Flashcard introuvable' });
+    return res.status(404).json({ message: 'Flashcard not found' });
   }
 
+  // Check ownership
   if (result.collection.ownerId !== req.user.id && !req.user.isAdmin) {
-    return res.status(403).json({ message: 'Accès interdit' });
+    return res.status(403).json({ message: 'Forbidden' });
   }
 
   const [updated] = await db
@@ -143,6 +164,9 @@ export const updateFlashcard = async (req, res) => {
 /* -----------------------------
    DELETE FLASHCARD
 -------------------------------- */
+
+// Delete a flashcard
+// - Only collection owner or admin
 export const deleteFlashcard = async (req, res) => {
   const { flashcardId } = req.params;
 
@@ -156,11 +180,12 @@ export const deleteFlashcard = async (req, res) => {
     .where(eq(flashcards.id, flashcardId));
 
   if (!result) {
-    return res.status(404).json({ message: 'Flashcard introuvable' });
+    return res.status(404).json({ message: 'Flashcard not found' });
   }
 
+  // Check ownership
   if (result.collection.ownerId !== req.user.id && !req.user.isAdmin) {
-    return res.status(403).json({ message: 'Accès interdit' });
+    return res.status(403).json({ message: 'Forbidden' });
   }
 
   await db.delete(flashcards).where(eq(flashcards.id, flashcardId));
@@ -171,6 +196,9 @@ export const deleteFlashcard = async (req, res) => {
 /* -----------------------------
    FLASHCARDS TO REVIEW
 -------------------------------- */
+
+// Get flashcards to review (spaced repetition)
+// - Based on nextRevisionDate
 export const flashcardsToReview = async (req, res) => {
   const { collectionId } = req.params;
 
@@ -195,9 +223,14 @@ export const flashcardsToReview = async (req, res) => {
 /* -----------------------------
    REVIEW FLASHCARD
 -------------------------------- */
+
+// Review a flashcard
+// - Increases level
+// - Calculates next revision date
 export const reviewFlashcard = async (req, res) => {
   const { flashcardId } = req.params;
 
+  // Review delays in days
   const delays = [1, 2, 4, 8, 16];
 
   const [study] = await db
@@ -211,10 +244,11 @@ export const reviewFlashcard = async (req, res) => {
     );
 
   if (!study) {
-    return res.status(404).json({ message: 'Aucune étude trouvée' });
+    return res.status(404).json({ message: 'Study not found' });
   }
 
   const newLevel = Math.min(study.level + 1, 5);
+
   const nextDate = new Date();
   nextDate.setDate(nextDate.getDate() + delays[newLevel - 1]);
 

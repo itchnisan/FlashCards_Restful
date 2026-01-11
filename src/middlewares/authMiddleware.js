@@ -1,39 +1,42 @@
-import { response } from "express";
-import { request } from "express";
-
+import { request, response } from "express";
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 
-/**
- * 
- * @param {request} request 
- * @param {response} response 
- * @param {*} next 
- */
+// Middleware to authenticate requests using JWT
+// - Extracts token from Authorization header
+// - Verifies token validity
+// - Attaches user info to request object
 export const authenticateToken = (request, response, next) => {
+  try {
+    // Get Authorization header
+    const authHeader = request.headers.authorization;
 
-    try {
-        const authHeader = request.headers.authorization;
-        
-        const token = authHeader && authHeader.split(' ')[1];
-        if(!token) {
-            return response.status(401).json({
-                error: 'Access token required'
-            });
-        }
+    // Extract token (Bearer <token>)
+    const token = authHeader && authHeader.split(' ')[1];
 
-        const decodedToken = jwt.verify(token, process.env.JWT_SECRET); // retourne le token déchiffré
-        const userId = decodedToken.userId;        
-
-        request.user = { userId };
-        
-        next();   
-    } catch (error) {
-        console.error("Error:", error);
-        response.status(401).json({
-            error: 'Invalid token'
-        });
+    // No token provided
+    if (!token) {
+      return response.status(401).json({
+        error: 'Access token required'
+      });
     }
-}
+
+    // Verify and decode JWT
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Attach user data to request
+    request.user = {
+      userId: decodedToken.userId
+    };
+
+    next();
+  } catch (error) {
+    console.error('JWT error:', error);
+
+    response.status(401).json({
+      error: 'Invalid token'
+    });
+  }
+};
 
 export default authenticateToken;

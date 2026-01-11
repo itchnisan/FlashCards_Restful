@@ -3,6 +3,7 @@ import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { randomUUID } from 'crypto';
 import { boolean } from 'zod';
 
+// Define Flashcards table
 export const flashcards = sqliteTable('flashcards', {
     id: text().primaryKey().$defaultFn(() => randomUUID()),
     frontText: text('front_text').notNull(),
@@ -14,6 +15,7 @@ export const flashcards = sqliteTable('flashcards', {
     .notNull(),
 });
 
+// Define Collections table wich contains flashcards
 export const collections = sqliteTable('collections', {
     id: text().primaryKey().$defaultFn(() => randomUUID()),
     title: text({ length: 255 }).notNull(),
@@ -24,6 +26,7 @@ export const collections = sqliteTable('collections', {
     .notNull(),
 });
 
+// Define Users table
 export const users = sqliteTable('users', {
     id: text().primaryKey().$defaultFn(() => randomUUID()),
     email: text().notNull().unique(),
@@ -34,6 +37,7 @@ export const users = sqliteTable('users', {
     createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
 });
 
+// Define Studies table for the revision system
 export const studies = sqliteTable('studies', {
     id: text().primaryKey().$defaultFn(() => randomUUID()),
 

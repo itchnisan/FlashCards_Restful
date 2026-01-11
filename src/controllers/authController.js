@@ -17,78 +17,82 @@ import { eq } from "drizzle-orm";
  * 
  * La validation a déjà été faites par le middleware 
  */
+// Register a new user
+// - Hashes the password
+// - Stores the user in database
+// - Generates a JWT token (24h)
 export const register = async (request, response) => {
-    
     try {
-        console.log("Beginning...");
         const { firstname, lastname, password, email } = request.body;
-        
+
+        // Hash password before storing it
         const hashedPassword = await bcrypt.hash(password, 12);
-        
-        // On met les crochet [] car le .returning() nous
-        // renvoie un tableau avec un seul user, celui 
-        // que l'on vient de créer. Cela permet d'avoir
-        // uniquement la 1ère valeur
+
+        // Insert user into database
+        // .returning() returns an array, so we extract the first element
         const [newUser] = await database.insert(users).values({
-            // L'ordre des valeurs n'a pas d'importance 
-            // car le nom de la colonne est déjà spécifié
             firstName: firstname,
             lastName: lastname,
             password: hashedPassword,
             email
         }).returning({
             email: users.email,
-            id: users.id 
+            id: users.id
         });
 
+        // Create JWT token valid for 24 hours
         const token = jwt.sign(
-            { userId: newUser.id },   // Toutes les données que l'on vas chiffrer dans le user token
-            process.env.JWT_SECRET,  // 2ème argument c'est la clé secrète
-            // { expiresIn: '24j' }     // token valide pendant 24 jours
-            { expiresIn: '24h' }        // token valide 24 heures
+            { userId: newUser.id },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
         );
 
         response.status(201).json({
             message: 'User created',
             userData: newUser,
-            // token: 'TOKEN_JWT'
             token
         });
-        console.log("Ending.");
     } catch (error) {
         console.error(error);
         response.status(500).json({
-            error: 'Register failed',
-        })
+            error: 'Register failed'
+        });
     }
-}
+};
 
+
+// Login an existing user
+// - Checks email
+// - Verifies password
+// - Generates a JWT token (24h)
 export const login = async (request, response) => {
     try {
         const { email, password } = request.body;
 
+        // Find user by email
         const [user] = await db.select().from(users).where(eq(users.email, email));
-        
-        if(!user) {
+
+        // If user does not exist
+        if (!user) {
             return response.status(401).json({
-                // error: "Invalid email or password"
-                error : "Invalid credentials"
+                error: "Invalid credentials"
             });
         }
 
+        // Compare passwords
         const isValidPassword = await bcrypt.compare(password, user.password);
-        
-        if(!isValidPassword){
-            response.status(401).json({
-                error : "Invalid credentials"
+
+        if (!isValidPassword) {
+            return response.status(401).json({
+                error: "Invalid credentials"
             });
         }
 
+        // Create JWT token valid for 24 hours
         const token = jwt.sign(
-            { userId: user.id },   // Toutes les données que l'on vas chiffrer dans le user token
-            process.env.JWT_SECRET,  // 2ème argument c'est la clé secrète
-            // { expiresIn: '24j' }     // token valide pendant 24 jours
-            { expiresIn: '24h' }        // token valide 24 heures
+            { userId: user.id },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
         );
 
         response.status(200).json({
@@ -103,7 +107,7 @@ export const login = async (request, response) => {
     } catch (error) {
         console.error(error);
         response.status(500).json({
-            error: 'Login failed',
-        })
+            error: 'Login failed'
+        });
     }
 };

@@ -6,6 +6,7 @@ import { registerSchema } from "../models/auth.js";
 import { loginSchema } from "../models/auth.js";
 
 const router = Router();
+// Registration and login routes
 
 router.post('/register', validateBody(registerSchema), register);
 

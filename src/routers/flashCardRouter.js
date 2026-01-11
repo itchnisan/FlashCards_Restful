@@ -23,6 +23,8 @@ const router = Router();
 
 router.use(authMiddleware);
 
+// Flashcard routes
+
 router.post('/', validateBody(createFlashcardSchema), createFlashcard);
 
 router.get(

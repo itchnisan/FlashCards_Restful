@@ -8,6 +8,7 @@ import { users } from "../db/schema.js";
  * @param {request} request 
  * @param {response} response 
  */
+// Get authenticated user's information
 export const getUserInfo = async (request, response) => {
     try {
         const { userId } = request.user;

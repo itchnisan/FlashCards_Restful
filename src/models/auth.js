@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+// Schema for user registration and login
 export const registerSchema = z.object({
     email: z.email(),
     firstname: z.string().min(3),

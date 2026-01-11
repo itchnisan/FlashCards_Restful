@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
+// Schema for flashcard operations
 
+//vaidate flashcard ID parameter
 export const flashcardIdSchema = z.object({
   flashcardId: z.string().uuid(),
 });

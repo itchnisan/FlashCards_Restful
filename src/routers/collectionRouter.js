@@ -8,6 +8,7 @@ const router = Router();
 
 router.use(authMiddleware);
 
+// Collection routes
 router.get('/', listCollections);
 router.post('/', validateBody(createCollectionSchema), createCollection);
 router.get('/search', searchPublicCollections);
