@@ -14,6 +14,10 @@ export const getUserInfo = async (request, response) => {
 
         const [userInfo] = await db.select().from(users).where(eq(users.id, userId))
         
+        if(!userInfo){
+            response.status(404).json({error: "User information not found"})
+        }
+
         response.status(201).json({ 
             message: 'User information successfuly retrieved.',
             data: userInfo,

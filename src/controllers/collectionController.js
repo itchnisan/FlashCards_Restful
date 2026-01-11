@@ -1,4 +1,4 @@
-import { and, eq, like } from "drizzle-orm";
+import { and, eq, like, or } from "drizzle-orm";
 import { db } from "../db/database.js";
 import { collections,flashcards } from "../db/schema.js";
 import { request, response } from "express";
@@ -51,11 +51,22 @@ async function getCollection (request, response){
     
     try {
 
-        const collection = await db
+        const [collection] = await db
             .select()
             .from(collections)
-            .where(eq(collections.id , collectionId))
-            .andWhere(collections.ownerId,userId);
+            .where(
+                and(
+                    eq(collections.id , collectionId),
+                    or(
+                        eq(collections.ownerId,userId),
+                        eq(collections.visibility, "public")
+                    )
+                )
+            );
+
+        if(!collection){
+            return response.status(404).json({error: "Collection not found"})
+        }
         
         
         response.status(200).json(collection);
@@ -88,7 +99,6 @@ async function listCollections(request, response) {
  */
 async function searchPublicCollections(request, response) {
     const { title } = request.query;
-    console.log(title);
     if(!title){
         const titleCollections = await db.select()
         .from(collections)
@@ -116,20 +126,22 @@ async function searchPublicCollections(request, response) {
  */
 async function deleteCollection(request, response) {
   const { collectionId } = request.params;
-  const userId = request.userId;
+  const userId = request.user.userId;
 
 
-  const collection = await db.select().from(collections).where(eq(collections.id, collectionId)).first();
-  if (!collection) return response.status(404).json({ message: 'Collection non trouvée' });
+  const [collection] = await db.select().from(collections).where(eq(collections.id, collectionId));
+  if (!collection) return response.status(404).json({ message: 'Collection not found' });
 
-  if (collection.owner_id !== userId) {
-    return response.status(403).json({ message: 'Vous n\'êtes pas le propriétaire de cette collection' });
+  console.log(collection.ownerId)
+  console.log(userId)
+  if (collection.ownerId !== userId) {
+    return response.status(403).json({ message: 'You are not the owner' });
   }
 
 
-  await db.delete().from(flashcards).where(eq(flashcards.collectionId, collectionId));
-  await db.delete().from(collections).where(eq(collections.id, collectionId));
-  response.json({ message: 'Collection et flashcards supprimées' });
+  await db.delete(flashcards).where(eq(flashcards.collectionId, collectionId));
+  await db.delete(collections).where(eq(collections.id, collectionId));
+  response.json({ message: 'Collection and flashcards deleted' });
 }
 
 
@@ -140,19 +152,23 @@ async function deleteCollection(request, response) {
  * @param {response} response 
  */
 async function updateCollection(req, res) {
-  const { collectionId } = req.params;
-  const { title, description, visibility } = req.body;
-  const userId = req.userId;
+    const { collectionId } = req.params;
+    const { title, description, visibility } = req.body;
+    const userId = req.user.userId;
 
-  const collection = await db.select().from(collections).where(eq(collections.id, collectionId)).first();
-  if (!collection) return res.status(404).json({ message: 'Collection non trouvée' });
+    if (title === undefined && description === undefined && visibility === undefined) {
+        return res.status(400).json({ message: "No fields to update" });
+    }
 
-  if (collection.owner_id !== userId) {
-    return res.status(403).json({ message: 'Vous n\'êtes pas le propriétaire de cette collection' });
-  }
+    const [collection] = await db.select().from(collections).where(eq(collections.id, collectionId));
+    if (!collection) return res.status(404).json({ message: 'Collection not found' });
 
-  await db.update(collections).set({ title, description, visibility }).where(eq(collections.id, collectionId));
-  res.json({ message: 'Collection mise à jour' });
+    if (collection.ownerId !== userId) {
+        return res.status(403).json({ message: 'You are not the collection owner' });
+    }
+
+    await db.update(collections).set({ title, description, visibility }).where(eq(collections.id, collectionId));
+    res.json({ message: 'Collection updated' });
 }
 
 export {
