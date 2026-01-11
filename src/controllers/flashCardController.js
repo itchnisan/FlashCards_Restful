@@ -1,4 +1,4 @@
-import { db } from '../db/client.js';
+import { db } from '../db/database.js';
 import { flashcards, collections, studies } from '../db/schema.js';
 import { eq, and, lte } from 'drizzle-orm';
 
@@ -12,6 +12,7 @@ import { eq, and, lte } from 'drizzle-orm';
 export const createFlashcard = async (req, res) => {
   try {
     const { frontText, backText, frontUrls, backUrls, collectionId } = req.body;
+    const {userId} = req.user
 
     // Check if collection exists
     const [collection] = await db
@@ -24,7 +25,7 @@ export const createFlashcard = async (req, res) => {
     }
 
     // Check access rights
-    if (collection.ownerId !== req.user.id && !req.user.isAdmin) {
+    if (collection.ownerId !== userId && !req.user.isAdmin) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
@@ -42,12 +43,13 @@ export const createFlashcard = async (req, res) => {
 
     // Initialize spaced repetition for the owner
     await db.insert(studies).values({
-      userId: req.user.id,
+      userId: userId,
       flashcardId: flashcard.id,
     });
 
     res.status(201).json(flashcard);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -132,33 +134,41 @@ export const listFlashcardsByCollection = async (req, res) => {
 // Update a flashcard
 // - Only collection owner or admin
 export const updateFlashcard = async (req, res) => {
-  const { flashcardId } = req.params;
+    const { flashcardId } = req.params;
 
-  const [result] = await db
-    .select({
-      flashcard: flashcards,
-      collection: collections,
-    })
-    .from(flashcards)
-    .innerJoin(collections, eq(collections.id, flashcards.collectionId))
-    .where(eq(flashcards.id, flashcardId));
+    const {userId} = req.user;
 
-  if (!result) {
-    return res.status(404).json({ message: 'Flashcard not found' });
-  }
+    const {frontText, backText, frontUrls, backUrls} = req.body;
 
-  // Check ownership
-  if (result.collection.ownerId !== req.user.id && !req.user.isAdmin) {
-    return res.status(403).json({ message: 'Forbidden' });
-  }
+    const [result] = await db
+      .select({
+        flashcard: flashcards,
+        collection: collections,
+      })
+      .from(flashcards)
+      .innerJoin(collections, eq(collections.id, flashcards.collectionId))
+      .where(eq(flashcards.id, flashcardId));
 
-  const [updated] = await db
-    .update(flashcards)
-    .set(req.body)
-    .where(eq(flashcards.id, flashcardId))
-    .returning();
+    if (!result) {
+      return res.status(404).json({ message: 'Flashcard not found' });
+    }
 
-  res.json(updated);
+    // Check ownership
+    if (result.collection.ownerId !== userId && !req.user.isAdmin) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    if(frontText === undefined && backText=== undefined && frontUrls=== undefined && backUrls=== undefined) {
+        return res.status(400).json({ message: "No fields to update" });
+    }
+
+    const [updated] = await db
+      .update(flashcards)
+      .set({frontText, backText, frontUrls, backUrls})
+      .where(eq(flashcards.id, flashcardId))
+      .returning();
+
+    res.json(updated);
 };
 
 /* -----------------------------
@@ -201,6 +211,7 @@ export const deleteFlashcard = async (req, res) => {
 // - Based on nextRevisionDate
 export const flashcardsToReview = async (req, res) => {
   const { collectionId } = req.params;
+  const {userId} = req.user;
 
   const cards = await db
     .select({
@@ -211,7 +222,7 @@ export const flashcardsToReview = async (req, res) => {
     .innerJoin(flashcards, eq(flashcards.id, studies.flashcardId))
     .where(
       and(
-        eq(studies.userId, req.user.id),
+        eq(studies.userId, userId),
         eq(flashcards.collectionId, collectionId),
         lte(studies.nextRevisionDate, new Date())
       )

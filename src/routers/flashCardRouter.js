@@ -15,9 +15,9 @@ import {
 import {
   createFlashcardSchema,
   updateFlashcardSchema,
-  flashcardIdSchema,
-  collectionIdSchema,
+  flashcardIdSchema
 } from '../models/flashCardsModel.js';
+import { collectionIdSchema } from '../models/collectionModel.js';
 
 const router = Router();
 
@@ -34,7 +34,7 @@ router.get(
 );
 
 router.get(
-  '/collection/:collectionId/review',
+  '/collection/review/:collectionId/',
   validateParams(collectionIdSchema),
   flashcardsToReview
 );
@@ -59,7 +59,7 @@ router.delete(
 );
 
 router.post(
-  '/:flashcardId/review',
+  '/review/:flashcardId',
   validateParams(flashcardIdSchema),
   reviewFlashcard
 );

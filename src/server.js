@@ -18,7 +18,8 @@ import flashCardRoutes from './routers/flashCardRouter.js';
 app.use('/api/auth', authRoutes);
 //app.use('/api/users', userRoutes);
 app.use('/api/collection', collectionRoutes);
-//app.use('/api/flashcards', flashCardRoutes);
+
+app.use('/api/flashcard', flashCardRoutes);
 
 app.use('/api/user', usersRoutes);
 
