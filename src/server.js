@@ -1,29 +1,28 @@
 import express from 'express';
 import { config } from 'dotenv';
-config(); // Charger les variables d'environnement depuis le fichier .env
+
+config(); // Load environment variables from the .env file
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware pour parser le JSON
+// Middleware to parse incoming JSON requests
 app.use(express.json());
 
-// Importer les routes
+// Import route handlers
 import authRoutes from './routers/authRouter.js';
 import usersRoutes from './routers/usersRouter.js';
 import collectionRoutes from './routers/collectionRouter.js';
 import flashCardRoutes from './routers/flashCardRouter.js';
 
-// Utiliser les routes
+// Register API routes
 app.use('/api/auth', authRoutes);
-//app.use('/api/users', userRoutes);
+// app.use('/api/users', userRoutes);
 app.use('/api/collection', collectionRoutes);
-
 app.use('/api/flashcard', flashCardRoutes);
-
 app.use('/api/user', usersRoutes);
 
-// Démarrer le serveur
+// Start the server
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });

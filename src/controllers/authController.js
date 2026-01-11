@@ -10,31 +10,33 @@ import { eq } from "drizzle-orm";
 
 
 /**
- * Permet d'avoir l'autocomplétion de ces variables
- * pour avoir les méthodes associées proposées
- * @param {request} request 
+ * Allows autocomplete for request/response variables
+ * so Express methods are suggested by the editor
+ *
+ * @param {request} request
  * @param {response} response
- * 
- * La validation a déjà été faites par le middleware 
+ *
+ * Validation is already handled by middleware
  */
+
 // Register a new user
 // - Hashes the password
-// - Stores the user in database
-// - Generates a JWT token (24h)
+// - Stores the user in the database
+// - Generates a JWT token (valid for 24 hours)
 export const register = async (request, response) => {
     try {
         const { firstname, lastname, password, email } = request.body;
 
-        // Hash password before storing it
+        // Hash the password before storing it
         const hashedPassword = await bcrypt.hash(password, 12);
 
-        // Insert user into database
+        // Insert the user into the database
         // .returning() returns an array, so we extract the first element
         const [newUser] = await database.insert(users).values({
             firstName: firstname,
             lastName: lastname,
             password: hashedPassword,
-            email, 
+            email,
             isAdmin
         }).returning({
             email: users.email,
@@ -42,15 +44,14 @@ export const register = async (request, response) => {
             isAdmin: users.isAdmin
         });
 
-        // Create JWT token valid for 24 hours
+        // Create a JWT token valid for 24 hours
         const token = jwt.sign(
-            { 
+            {
                 userId: newUser.id,
                 isAdmin: newUser.isAdmin
-            },   // Toutes les données que l'on vas chiffrer dans le user token
-            process.env.JWT_SECRET,  // 2ème argument c'est la clé secrète
-            // { expiresIn: '24j' }     // token valide pendant 24 jours
-            { expiresIn: '24h' }        // token valide 24 heures
+            }, // Data embedded inside the JWT
+            process.env.JWT_SECRET, // Secret key used to sign the token
+            { expiresIn: '24h' }    // Token expiration time
         );
 
         response.status(201).json({
@@ -61,22 +62,25 @@ export const register = async (request, response) => {
     } catch (error) {
         console.error(error);
         response.status(500).json({
-            error: 'Register failed'
+            error: 'Register failed, user may already exist',
         });
     }
 };
 
 
 // Login an existing user
-// - Checks email
-// - Verifies password
-// - Generates a JWT token (24h)
+// - Checks if the email exists
+// - Verifies the password
+// - Generates a JWT token (valid for 24 hours)
 export const login = async (request, response) => {
     try {
         const { email, password } = request.body;
 
         // Find user by email
-        const [user] = await db.select().from(users).where(eq(users.email, email));
+        const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, email));
 
         // If user does not exist
         if (!user) {
@@ -85,7 +89,7 @@ export const login = async (request, response) => {
             });
         }
 
-        // Compare passwords
+        // Compare the provided password with the hashed one
         const isValidPassword = await bcrypt.compare(password, user.password);
 
         if (!isValidPassword) {
@@ -94,12 +98,14 @@ export const login = async (request, response) => {
             });
         }
 
-        // Create JWT token valid for 24 hours
+        // Create a JWT token valid for 24 hours
         const token = jwt.sign(
-            { userId: user.id, isAdmin: user.isAdmin },   // Toutes les données que l'on vas chiffrer dans le user token
-            process.env.JWT_SECRET,  // 2ème argument c'est la clé secrète
-            // { expiresIn: '24j' }     // token valide pendant 24 jours
-            { expiresIn: '24h' }        // token valide 24 heures
+            {
+                userId: user.id,
+                isAdmin: user.isAdmin
+            }, // Data embedded inside the JWT
+            process.env.JWT_SECRET, // Secret key used to sign the token
+            { expiresIn: '24h' }    // Token expiration time
         );
 
         response.status(200).json({
