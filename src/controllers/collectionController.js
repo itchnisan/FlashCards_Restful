@@ -12,14 +12,14 @@ import { request, response } from "express";
  */
 async function createCollection (request, response){   
     try {
-        const { titre, description, visibility } = request.body;
+        const { title, description, visibility } = request.body;
         const { userId } = request.user;
 
         const [newCollection] = await db.insert(collections).values({
-            titre, 
+            title, 
             description, 
             visibility,
-            owner_id: userId
+            ownerId: userId
         }).returning();
         
         response.status(201).json({ 
